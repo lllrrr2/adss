@@ -10,8 +10,6 @@ env:
 
 on:
   workflow_dispatch:
-  repository_dispatch:
-    types: [rules_updated]
   push:
   delete:
   create:
@@ -26,9 +24,6 @@ jobs:
       contents: write
 
     steps:
-    
-      - name: CheckOut
-        uses: actions/checkout@v4
 
       - name: Set TimeZone
         env:
@@ -36,16 +31,34 @@ jobs:
         run: |
           sudo timedatectl set-timezone "$TZ"
 
+      - name: Install git-filter-repo
+        run: |
+          sudo apt-get update
+          sudo apt-get install git-filter-repo -y
+
       - name: Mirrors Synchronized
         env:
           SOURCE_REPO: 'https://github.com/clion007/adss.git'
-          DESTINATION_REPO: 'https://clion007:${{ secrets.GITCODE_TOKEN }}@gitcode.net/clion007/adss.git'
+          DESTINATION_REPO: 'https://clion:${{ secrets.GITCODE_TOKEN2 }}@gitcode.com/clion/adss.git'
         run: |
-          git clone --mirror "$SOURCE_REPO" && cd `basename "$SOURCE_REPO"`
+          # 1. 浅克隆源仓库（只拉取最新一次提交）
+          git clone --depth=1 "$SOURCE_REPO" adss-mirror
+          cd adss-mirror
+
+          # 2. 配置 Git 用户信息
+          git config user.name "clion007"
+          git config user.email "clion007@126.com"
+
+          # 2. 删除大文件（工作区）
+          rm -f rules/file/dnsrules.conf rules/file/hostsrules.conf
+
+          # 3. 将删除操作合并到最新提交（修改最近一次提交）
+          git add -A
+          git commit --amend --no-edit
+
+          # 4. 强制推送到目标仓库（覆盖 master 分支）
           git remote set-url --push origin "$DESTINATION_REPO"
-          git fetch -p origin
-          git for-each-ref --format 'delete %(refname)' refs/pull | git update-ref --stdin
-          git push --mirror
+          git push --force origin master
       
       - name: Delete Workflow Runs
         uses: Mattraks/delete-workflow-runs@main

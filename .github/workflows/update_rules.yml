@@ -25,7 +25,7 @@ jobs:
     steps:
     
       - name: CheckOut
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set TimeZone
         env:
@@ -36,39 +36,16 @@ jobs:
       - name: Build Rules
         shell: sh
         run: |
-          sh ./installer/copyright.sh
-          sh ./rules/builder/initRulesFile.sh
-          echo 
-          sh ./rules/builder/getDnsmasqAdRules.sh
-          echo 
-          sh ./rules/builder/getHostsAdRules.sh
-          echo 
-          sh ./rules/builder/deletWhiteListRules.sh
-          echo 
-          echo -e "\e[1;36m 删除重复规则\e[0m"
-          echo  
-          sort -u /tmp/adss/dnsAd >> /tmp/adss/dnsrules.conf
-          echo "# Modified DNS end" >> /tmp/adss/dnsrules.conf
-          sort -u /tmp/adss/hostsAd >> /tmp/adss/hostsrules.conf
-          echo "# 修饰 hosts 结束" >> /tmp/adss/hostsrules.conf
-          mv -f /tmp/adss/dnsrules.conf ./rules/file/dnsrules.conf
-          mv -f /tmp/adss/hostsrules.conf ./rules/file/hostsrules.conf
-          echo -e "\e[1;36m 规则创建完成！\e[0m"
-          rm -rf /tmp/adss
+          chmod +x ./rules/builder/build.sh
+          ./rules/builder/build.sh
 
       - name: Commit and Push Rules
         id: commit
-        uses: stefanzweifel/git-auto-commit-action@v5
+        uses: stefanzweifel/git-auto-commit-action@v7
         with:
           commit_author: Clion <clion007@126.com>
           commit_message: Automated Update Rules
           file_pattern: rules/file/*.conf
-        
-      - name: Repository Dispatch
-        if: steps.commit.outputs.changes_detected == 'true'
-        uses: peter-evans/repository-dispatch@v3
-        with:
-          event-type: rules_updated
       
       - name: Delete Workflow Runs
         uses: Mattraks/delete-workflow-runs@main
